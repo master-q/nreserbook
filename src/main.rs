@@ -12,12 +12,12 @@ struct CalilCheck {
 }
 
 const APPKEY: &str = env!("CALIL_APPKEY");
-const NUMREQ: usize = 100;
+const MAXREQ: usize = 100;
 const LIBRARY: &str = "Kanagawa_Yokohama";
 
 // private
 fn isbn_to_reserveurl_once(isbns: Vec<String>) -> HashMap<String, String> {
-    assert!(isbns.len() <= NUMREQ);
+    assert!(isbns.len() <= MAXREQ);
 
     let mut session: Option<String> = None;
     let mut cont;
@@ -64,7 +64,7 @@ fn isbn_to_reserveurl_once(isbns: Vec<String>) -> HashMap<String, String> {
 
 fn isbn_to_reserveurl(isbns: Vec<String>) -> HashMap<String, String> {
     let mut ret = HashMap::new();
-    for c in isbns.chunks(NUMREQ) {
+    for c in isbns.chunks(MAXREQ) {
         ret.extend(isbn_to_reserveurl_once(c.to_vec()));
     }
     return ret;
