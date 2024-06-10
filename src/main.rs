@@ -11,15 +11,18 @@ struct CalilCheck {
     books: Map<String, Value>,
 }
 
-const LIBRARY: &str = "Kanagawa_Yokohama";
 const APPKEY: &str = env!("CALIL_APPKEY");
+const NUMREQ: usize = 100;
+const LIBRARY: &str = "Kanagawa_Yokohama";
 
+// private
 fn isbn_to_reserveurl_once(isbns: Vec<String>) -> HashMap<String, String> {
-    assert!(isbns.len() <= 100);
+    assert!(isbns.len() <= NUMREQ);
 
     let mut session: Option<String> = None;
     let mut cont;
 
+    println!("+");
     loop {
         // API specification
         // https://calil.jp/doc/api_ref.html
@@ -59,13 +62,21 @@ fn isbn_to_reserveurl_once(isbns: Vec<String>) -> HashMap<String, String> {
     }
 }
 
+fn isbn_to_reserveurl(isbns: Vec<String>) -> HashMap<String, String> {
+    let mut ret = HashMap::new();
+    for c in isbns.chunks(NUMREQ) {
+        ret.extend(isbn_to_reserveurl_once(c.to_vec()));
+    }
+    return ret;
+}
+
 fn main() {
     let mut isbns = Vec::new();
     isbns.push("4405012539".to_string());
     isbns.push("4492553908".to_string());
     isbns.push("4797395230".to_string());
 
-    let ret = isbn_to_reserveurl_once(isbns);
+    let ret = isbn_to_reserveurl(isbns);
     for r in ret {
         println!("{}: {}", r.0, r.1);
     }
