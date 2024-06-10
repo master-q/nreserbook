@@ -51,7 +51,7 @@ fn isbn_to_reserveurl_once(isbns: Vec<String>) -> HashMap<String, String> {
             for val in iter {
                 let lib = val.1.as_object().unwrap()[LIBRARY].as_object().unwrap();
                 assert!(lib["status"] == "OK" || lib["status"] == "Cache");
-                reserveurls.insert(val.0.to_string(), lib["reserveurl"].to_string());
+                reserveurls.insert(val.0.to_string(), lib["reserveurl"].as_str().unwrap().to_string());
             }
             return reserveurls;
         }
