@@ -70,14 +70,25 @@ fn isbn_to_reserveurl(isbns: Vec<String>) -> HashMap<String, String> {
     return ret;
 }
 
+fn nwait_reserve(url: &String) -> String {
+    let html_content = reqwest::blocking::get(url).unwrap().text().unwrap();
+    let document = scraper::Html::parse_document(&html_content);
+    let selector = scraper::Selector::parse("em").unwrap();
+    let mut ems = document.select(&selector);
+    let _ = ems.next().unwrap();
+    let em = ems.next().unwrap();
+    return em.inner_html();
+}
+
 fn main() {
     let mut isbns = Vec::new();
-    isbns.push("4405012539".to_string());
-    isbns.push("4492553908".to_string());
-    isbns.push("4797395230".to_string());
+    isbns.push("4152100702".to_string());
+    isbns.push("4334102905".to_string());
+    isbns.push("4478109680".to_string());
 
     let ret = isbn_to_reserveurl(isbns);
     for r in ret {
-        println!("{}: {}", r.0, r.1);
+        let w = nwait_reserve(&r.1);
+        println!("{}: ({}) {}", r.0, w, r.1);
     }
 }
