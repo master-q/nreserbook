@@ -22,7 +22,7 @@ fn isbn_to_reserveurl_once(isbns: Vec<String>) -> HashMap<String, String> {
     let mut session: Option<String> = None;
     let mut cont;
 
-    println!("+");
+    eprint!("+");
     loop {
         // API specification
         // https://calil.jp/doc/api_ref.html
@@ -56,7 +56,7 @@ fn isbn_to_reserveurl_once(isbns: Vec<String>) -> HashMap<String, String> {
             return reserveurls;
         }
 
-        println!(".");
+        eprint!(".");
         let dur = time::Duration::from_secs(2);
         thread::sleep(dur);
     }
@@ -87,6 +87,8 @@ fn main() {
     isbns.push("4478109680".to_string());
 
     let ret = isbn_to_reserveurl(isbns);
+    eprintln!("");
+
     for r in ret {
         let w = nwait_reserve(&r.1);
         println!("{}: ({}) {}", r.0, w, r.1);
