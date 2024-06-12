@@ -16,7 +16,7 @@ struct CalilCheck {
 }
 
 const APPKEY: &str = env!("CALIL_APPKEY");
-const MAXREQ: usize = 100;
+const MAXREQ: usize = 10; // xxx Do not support 100?
 const LIBRARY: &str = "Kanagawa_Yokohama";
 
 // private
@@ -53,9 +53,11 @@ fn isbn_to_reserveurl_once(isbns: Vec<String>) -> HashMap<String, String> {
             let mut reserveurls = HashMap::new();
             let iter = json.books.iter();
             for val in iter {
+//                println!("{:?}", val);
                 let lib = val.1.as_object().unwrap()[LIBRARY].as_object().unwrap();
                 assert!(lib["status"] == "OK" || lib["status"] == "Cache");
-                reserveurls.insert(val.0.to_string(), lib["reserveurl"].as_str().unwrap().to_string());
+                let r = lib["reserveurl"].as_str().unwrap();
+                reserveurls.insert(val.0.to_string(), r.to_string());
             }
             return reserveurls;
         }
@@ -107,7 +109,11 @@ fn main() {
     eprintln!("");
 
     for r in ret {
-        let w = nwait_reserve(&r.1);
+        let w = if r.1.is_empty() {
+            "-"
+        } else {
+            &nwait_reserve(&r.1)
+        };
         println!("{}: ({}) {}", r.0, w, r.1);
     }
 }
