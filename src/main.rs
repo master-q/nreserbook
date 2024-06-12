@@ -1,8 +1,12 @@
 extern crate reqwest;
+use std::collections::HashMap;
+use std::env;
+use std::fs::File;
+use std::io::{BufRead, BufReader};
+use std::{thread, time};
+use regex::Regex;
 use serde::{Deserialize, Serialize};
 use serde_json::{Map, Value};
-use std::{thread, time};
-use std::collections::HashMap;
 
 #[derive(Serialize, Deserialize)]
 struct CalilCheck {
@@ -80,11 +84,23 @@ fn nwait_reserve(url: &String) -> String {
     return em.inner_html();
 }
 
+fn to_isbn(input: String) -> Option<String> {
+    let re = Regex::new(r"^\* .+https://.+amazon.*/(\d+)").unwrap();
+    return match re.captures(&input) {
+        Some(caps) => Some(caps[1].to_string()),
+        None => None,
+    }
+}
+
 fn main() {
     let mut isbns = Vec::new();
-    isbns.push("4152100702".to_string());
-    isbns.push("4334102905".to_string());
-    isbns.push("4478109680".to_string());
+    let args: Vec<String> = env::args().collect();
+    let f = File::open(&args[1]).expect("File not found.");
+    for line in BufReader::new(f).lines() {
+        if let Some(isbn) = to_isbn(line.unwrap()) {
+            isbns.push(isbn);
+        }
+    }
 
     let ret = isbn_to_reserveurl(isbns);
     eprintln!("");
