@@ -84,8 +84,8 @@ fn nwait_reserve(url: &String) -> String {
     return em.inner_html();
 }
 
-fn to_isbn(input: String) -> Option<String> {
-    let re = Regex::new(r"^\* .+https://.+amazon.*/(\d+)").unwrap();
+fn to_isbn(input: &String) -> Option<String> {
+    let re = Regex::new(r"^\* .+https://.+amazon.*/([\dX]+)").unwrap();
     return match re.captures(&input) {
         Some(caps) => Some(caps[1].to_string()),
         None => None,
@@ -97,7 +97,8 @@ fn main() {
     let args: Vec<String> = env::args().collect();
     let f = File::open(&args[1]).expect("File not found.");
     for line in BufReader::new(f).lines() {
-        if let Some(isbn) = to_isbn(line.unwrap()) {
+        let l = line.unwrap();
+        if let Some(isbn) = to_isbn(&l) {
             isbns.push(isbn);
         }
     }
