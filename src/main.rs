@@ -60,7 +60,6 @@ fn isbn_to_reserveurl_once(isbns: Vec<String>) -> HashMap<String, Calil> {
             let mut reserveurls = HashMap::new();
             let iter = json.books.iter();
             for val in iter {
-//                println!("{:?}", val);
                 let lib = val.1.as_object().unwrap()[LIBRARY].as_object().unwrap();
                 assert!(lib["status"] == "OK" || lib["status"] == "Cache");
                 let r = lib["reserveurl"].as_str().unwrap();
