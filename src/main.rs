@@ -144,30 +144,43 @@ fn load_bookmap() -> HashMap<String, Calil> {
     }
 }
 
+fn remove_bookmap() {
+    let _ = std::fs::remove_file(JSONFILE);
+}
+
 fn main() {
     let mut bookmap = load_bookmap();
 
     let args: Vec<String> = env::args().collect();
-    let lines = read_to_string(&args[1]).expect("File not found.");
-    for line in lines.lines() {
-        if let Some(isbn) = to_isbn(line) {
-	    if !bookmap.contains_key(&isbn) {
-		bookmap.insert(isbn, Calil::None);
+
+    if args[1] == "clean" {
+	remove_bookmap();
+	return;
+    }
+
+    let lines = read_to_string(&args[2]).expect("File not found.");
+    if args[1] == "update" {
+	for line in lines.lines() {
+	    if let Some(isbn) = to_isbn(line) {
+		if !bookmap.contains_key(&isbn) {
+		    bookmap.insert(isbn, Calil::None);
+		}
 	    }
-        }
-    }
+	}
 
-    isbn_to_reserveurl(&mut bookmap);
-    save_bookmap(&bookmap);
-    eprintln!("");
-
-    for line in lines.lines() {
-        let mut w = String::from("?");
-	if let Some(isbn) = to_isbn(line) {
-	    if bookmap.contains_key(&isbn) {
-		w = nwait_reserve(bookmap.get(&isbn).unwrap());
+	isbn_to_reserveurl(&mut bookmap);
+	save_bookmap(&bookmap);
+	eprintln!("");
+    } else if args[1] == "show" {
+	for line in lines.lines() {
+	    let mut w = String::from("?");
+	    if let Some(isbn) = to_isbn(line) {
+		if bookmap.contains_key(&isbn) {
+		    w = nwait_reserve(bookmap.get(&isbn).unwrap());
+		};
+		println!("[{}] {}", w, line)
 	    };
-	    println!("[{}] {}", w, line)
-	};
+	}
     }
+
 }
