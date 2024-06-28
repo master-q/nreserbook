@@ -61,9 +61,16 @@ fn isbn_to_reserveurl_once(isbns: Vec<String>) -> HashMap<String, Calil> {
             let iter = json.books.iter();
             for val in iter {
                 let lib = val.1.as_object().unwrap()[LIBRARY].as_object().unwrap();
-                assert!(lib["status"] == "OK" || lib["status"] == "Cache");
-                let r = lib["reserveurl"].as_str().unwrap();
-                reserveurls.insert(val.0.to_string(), Calil::Reserveurl(r.to_string()));
+		if lib["status"] == "OK" || lib["status"] == "Cache" {
+		    let r = lib["reserveurl"].as_str().unwrap();
+		    if r.is_empty() {
+			reserveurls.insert(val.0.to_string(), Calil::None);
+		    } else {
+			reserveurls.insert(val.0.to_string(), Calil::Reserveurl(r.to_string()));
+		    }
+		} else {
+		    reserveurls.insert(val.0.to_string(), Calil::Error);
+		}
             }
             return reserveurls;
         }
