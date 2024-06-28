@@ -1,26 +1,33 @@
 extern crate reqwest;
 use std::collections::HashMap;
 use std::env;
-use std::fs::File;
-use std::io::{BufRead, BufReader};
 use std::{thread, time};
+use std::fs::read_to_string;
 use regex::Regex;
 use serde::{Deserialize, Serialize};
 use serde_json::{Map, Value};
 
-#[derive(Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize)]
 struct CalilCheck {
     session: String,
     r#continue: i32,
     books: Map<String, Value>,
 }
 
+#[derive(Debug, Serialize, Deserialize, PartialEq)]
+enum Calil {
+    None,
+    Error,
+    Reserveurl(String),
+}
+
 const APPKEY: &str = env!("CALIL_APPKEY");
 const MAXREQ: usize = 10; // xxx Do not support 100?
 const LIBRARY: &str = "Kanagawa_Yokohama";
+const JSONFILE: &str = "bookmap.json";
 
 // private
-fn isbn_to_reserveurl_once(isbns: Vec<String>) -> HashMap<String, String> {
+fn isbn_to_reserveurl_once(isbns: Vec<String>) -> HashMap<String, Calil> {
     assert!(isbns.len() <= MAXREQ);
 
     let mut session: Option<String> = None;
@@ -57,7 +64,7 @@ fn isbn_to_reserveurl_once(isbns: Vec<String>) -> HashMap<String, String> {
                 let lib = val.1.as_object().unwrap()[LIBRARY].as_object().unwrap();
                 assert!(lib["status"] == "OK" || lib["status"] == "Cache");
                 let r = lib["reserveurl"].as_str().unwrap();
-                reserveurls.insert(val.0.to_string(), r.to_string());
+                reserveurls.insert(val.0.to_string(), Calil::Reserveurl(r.to_string()));
             }
             return reserveurls;
         }
@@ -68,52 +75,82 @@ fn isbn_to_reserveurl_once(isbns: Vec<String>) -> HashMap<String, String> {
     }
 }
 
-fn isbn_to_reserveurl(isbns: Vec<String>) -> HashMap<String, String> {
-    let mut ret = HashMap::new();
-    for c in isbns.chunks(MAXREQ) {
-        ret.extend(isbn_to_reserveurl_once(c.to_vec()));
+fn isbn_to_reserveurl(bookmap: &mut HashMap<String, Calil>) {
+    let mut isbns: Vec<String> = Vec::new();
+    for b in &mut *bookmap {
+	if b.1 == &mut Calil::None || b.1 == &mut Calil::Error {
+	    isbns.push(b.0.to_string())
+	};
     }
-    return ret;
+    for c in isbns.chunks(MAXREQ) {
+        bookmap.extend(isbn_to_reserveurl_once(c.to_vec()));
+    }
 }
 
-fn nwait_reserve(url: &String) -> String {
-    let html_content = reqwest::blocking::get(url).unwrap().text().unwrap();
-    let document = scraper::Html::parse_document(&html_content);
-    let selector = scraper::Selector::parse("em").unwrap();
-    let mut ems = document.select(&selector);
-    let _ = ems.next().unwrap();
-    let em = ems.next().unwrap();
-    return em.inner_html();
+fn nwait_reserve(calil: &Calil) -> String {
+    match calil {
+	Calil::None => "-".to_string(),
+	Calil::Error => "E".to_string(),
+	Calil::Reserveurl(url) => {
+	    let html_content = reqwest::blocking::get(url).unwrap().text().unwrap();
+	    let document = scraper::Html::parse_document(&html_content);
+	    let selector = scraper::Selector::parse("em").unwrap();
+	    let mut ems = document.select(&selector);
+	    let _ = ems.next().unwrap();
+	    let em = ems.next().unwrap();
+	    em.inner_html()
+	},
+    }
 }
 
-fn to_isbn(input: &String) -> Option<String> {
+fn to_isbn(input: &str) -> Option<String> {
     let re = Regex::new(r"^\* .+https://.+amazon.*/([\dX]+)").unwrap();
-    return match re.captures(&input) {
+    return match re.captures(input) {
         Some(caps) => Some(caps[1].to_string()),
         None => None,
     }
 }
 
+fn save_bookmap(bookmap: &HashMap<String, Calil>) {
+    let j = serde_json::to_string(&bookmap).unwrap();
+    std::fs::write(JSONFILE, j).unwrap();
+}
+
+fn load_bookmap() -> HashMap<String, Calil> {
+    match read_to_string(JSONFILE) {
+	Err(_) => {
+	    let b = HashMap::new();
+	    save_bookmap(&b);
+	    b
+	},
+	Ok(json) => match serde_json::from_str(&json) {
+	    Err(_) => {
+		let b = HashMap::new();
+		save_bookmap(&b);
+		b
+	    },
+	    Ok(b) => b,
+	}
+    }
+}
+
 fn main() {
-    let mut isbns = Vec::new();
+    let mut bookmap = load_bookmap();
+
     let args: Vec<String> = env::args().collect();
-    let f = File::open(&args[1]).expect("File not found.");
-    for line in BufReader::new(f).lines() {
-        let l = line.unwrap();
-        if let Some(isbn) = to_isbn(&l) {
-            isbns.push(isbn);
+    let lines = read_to_string(&args[1]).expect("File not found.");
+    for line in lines.lines() {
+        if let Some(isbn) = to_isbn(line) {
+	    bookmap.insert(isbn, Calil::None);
         }
     }
 
-    let ret = isbn_to_reserveurl(isbns);
+    isbn_to_reserveurl(&mut bookmap);
+    save_bookmap(&bookmap);
     eprintln!("");
 
-    for r in ret {
-        let w = if r.1.is_empty() {
-            "-"
-        } else {
-            &nwait_reserve(&r.1)
-        };
-        println!("{}: ({}) {}", r.0, w, r.1);
+    for r in bookmap {
+        let w = &nwait_reserve(&r.1);
+        println!("{}: ({}) {:?}", r.0, w, r.1);
     }
 }
