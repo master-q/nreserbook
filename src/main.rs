@@ -90,6 +90,7 @@ fn isbn_to_reserveurl(bookmap: &mut HashMap<String, Calil>) {
     }
     for c in isbns.chunks(MAXREQ) {
         bookmap.extend(isbn_to_reserveurl_once(c.to_vec()));
+        save_bookmap(bookmap);
     }
 }
 
@@ -155,8 +156,13 @@ fn main() {
     save_bookmap(&bookmap);
     eprintln!("");
 
-    for r in bookmap {
-        let w = &nwait_reserve(&r.1);
-        println!("{}: ({}) {:?}", r.0, w, r.1);
+    for line in lines.lines() {
+        let mut w = String::from("?");
+	if let Some(isbn) = to_isbn(line) {
+	    if bookmap.contains_key(&isbn) {
+		w = nwait_reserve(bookmap.get(&isbn).unwrap());
+	    };
+	    println!("[{}] {}", w, line)
+	};
     }
 }
