@@ -151,7 +151,9 @@ fn main() {
     let lines = read_to_string(&args[1]).expect("File not found.");
     for line in lines.lines() {
         if let Some(isbn) = to_isbn(line) {
-	    bookmap.insert(isbn, Calil::None);
+	    if !bookmap.contains_key(&isbn) {
+		bookmap.insert(isbn, Calil::None);
+	    }
         }
     }
 
