@@ -45,14 +45,17 @@ fn isbn_to_reserveurl_once(isbns: Vec<String>) -> HashMap<String, Calil> {
                 + "&systemid="
                 + LIBRARY
                 + "&format=json&callback=no",
-            Some(s) => "https://api.calil.jp/check?appkey".to_string()
+            Some(ref s) => "https://api.calil.jp/check?appkey".to_string()
                 + APPKEY
                 + "&session="
                 + &s
                 + "&format=json&callback=no"
         };
         let res = reqwest::blocking::get(url).unwrap().text().unwrap();
-        let json: CalilCheck = serde_json::from_str(&res).unwrap();
+        let Ok(json) = serde_json::from_str::<CalilCheck>(&res) else {
+            eprint!("E");
+            continue;
+        };
         session = Some(json.session);
         cont = json.r#continue;
 
