@@ -178,7 +178,7 @@ fn main() {
 		if bookmap.contains_key(&isbn) {
 		    w = nwait_reserve(bookmap.get(&isbn).unwrap());
 		};
-		println!("[{}] {}", w, line)
+		println!("{} / {}", w, line)
 	    };
 	}
     }
