@@ -101,14 +101,25 @@ fn nwait_reserve(calil: &Calil) -> String {
     match calil {
 	Calil::None => "-".to_string(),
 	Calil::Error => "E".to_string(),
-	Calil::Reserveurl(url) => {
-	    let html_content = reqwest::blocking::get(url).unwrap().text().unwrap();
+	Calil::Reserveurl(url) => loop {
+	    let Ok(res) = reqwest::blocking::get(url) else {
+		continue;
+	    };
+	    let Ok(html_content) = res.text() else {
+		continue;
+	    };
 	    let document = scraper::Html::parse_document(&html_content);
-	    let selector = scraper::Selector::parse("em").unwrap();
+	    let Ok(selector) = scraper::Selector::parse("em") else {
+		continue;
+	    };
 	    let mut ems = document.select(&selector);
-	    let _ = ems.next().unwrap();
-	    let em = ems.next().unwrap();
-	    em.inner_html()
+	    let Some(_) = ems.next() else {
+		continue;
+	    };
+	    let Some(em) = ems.next() else {
+		continue;
+	    };
+	    return em.inner_html()
 	},
     }
 }
